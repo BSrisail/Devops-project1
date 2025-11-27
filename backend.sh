@@ -3,6 +3,7 @@ dnf module enable nodejs:18 -y
 
 dnf install nodejs -y
 
+cp backend.service /etc/systemd/system/backend.service
 useradd expense
 
 mkdir /app
@@ -13,10 +14,10 @@ unzip /tmp/backend.zip
 
 cd /app 
 npm install 
-cp backend.service /etc/systemd/system/backend.service
-
-systemctl enable backend 
-systemctl start backend
 
 dnf install mysql -y
 mysql -h 10.0.0.27 -uroot -pExpenseApp@1 < /app/schema/backend.sql
+
+systemctl daemon-reload
+systemctl enable backend 
+systemctl start backend
