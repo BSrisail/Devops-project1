@@ -12,3 +12,5 @@ unzip /tmp/frontend.zip
 
 systemctl enable nginx 
 systemctl start nginx 
+
+###test git push
