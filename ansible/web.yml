@@ -1,7 +1,32 @@
-- hosts: localhost
-  connection: local
+- name: config Nginx
+  hosts: all
   become: yes
+
   tasks:
-  - name: new host name
-    ansible.builtin.hostname:
-     name: "configmgmtsystem"
+   - name: Install Nginx
+     ansible.builtin.package:
+     name: Nginx
+     state: present
+   - name: copy expense.config 
+     ansible.builtin.copy:
+      src: expense.conf
+      dest: /etc/nginx/default.d/expense.conf
+   - name: clean html 
+     ansible.builtin.copy:
+      rm -rf /usr/share/nginx/html/* 
+      curl -o /tmp/frontend.zip https://expense-artifacts.s3.amazonaws.com/frontend.zip
+      cd /usr/share/nginx/html
+      unzip /tmp/frontend.zip
+   - name: Enable and start Nginx
+     ansible.builtin.systemd:
+      name: nginx
+      enable: yes
+      state: started
+     
+
+
+
+
+
+
+
