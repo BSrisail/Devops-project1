@@ -1,7 +1,7 @@
--hosts: localhost
- connection: local
- become: yes
- tasks:
-  -name: new host name
-   ansible.builtin.hostname:
-    name: "configmgmtsystem"
+- hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+  - name: new host name
+    ansible.builtin.hostname:
+     name: "configmgmtsystem"
