@@ -1,0 +1,6 @@
+-hots: all
+ connection: local
+ become: yes
+ tasks:
+  -ansible.builtin.hostname:
+   name: "configmgmtsystem"
