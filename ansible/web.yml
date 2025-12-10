@@ -1,7 +1,18 @@
 - name: Configure Nginx
   hosts: all
   become: yes
-
+  
+  vars:
+    frontend_url: "https://expense-artifacts.s3.amazonaws.com/frontend.zip"
+    nginx_html_dir: "/usr/share/nginx/html"
+    config_dir: "/etc/nginx/default.d"
+  
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded
+  
   tasks:
     - name: Install required packages
       ansible.builtin.package:
@@ -9,34 +20,52 @@
           - nginx
           - unzip
         state: present
-
+    
+    - name: Clean html directory
+      ansible.builtin.file:
+        path: "{{ nginx_html_dir }}"
+        state: absent
+    
+    - name: Recreate html directory
+      ansible.builtin.file:
+        path: "{{ nginx_html_dir }}"
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: '0755'
+    
     - name: Copy expense config
       ansible.builtin.copy:
         src: expense.conf
-        dest: /etc/nginx/default.d/expense.conf
+        dest: "{{ config_dir }}/expense.conf"
         owner: root
         group: root
         mode: '0644'
-
-    - name: Clean html directory
-      ansible.builtin.shell: rm -rf /usr/share/nginx/html/*
-      args:
-        warn: false
-
+      notify: Reload nginx
+    
     - name: Download frontend zip
       ansible.builtin.get_url:
-        url: https://expense-artifacts.s3.amazonaws.com/frontend.zip
+        url: "{{ frontend_url }}"
         dest: /tmp/frontend.zip
         mode: '0644'
-
+    
     - name: Extract frontend into nginx html
       ansible.builtin.unarchive:
         src: /tmp/frontend.zip
-        dest: /usr/share/nginx/html
+        dest: "{{ nginx_html_dir }}"
         remote_src: yes
-
+        owner: nginx
+        group: nginx
+    
+    - name: Validate nginx configuration
+      ansible.builtin.command: nginx -t
+      register: nginx_test
+      changed_when: false
+      notify: Reload nginx
+    
     - name: Ensure nginx is enabled and started
       ansible.builtin.systemd:
         name: nginx
         enabled: yes
         state: started
+      notify: Reload nginx
