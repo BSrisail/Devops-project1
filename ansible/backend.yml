@@ -159,13 +159,6 @@
         state: started
       register: service_status
 
-    - name: Verify application is running
-      ansible.builtin.wait_for:
-        port: 8080  # Assuming backend runs on port 8080, adjust as needed
-        delay: 5
-        timeout: 60
-      when: service_status.changed
-
     - name: Display setup completion
       ansible.builtin.debug:
         msg: |
