@@ -39,11 +39,9 @@
     - name: Set MySQL root password via socket
       ansible.builtin.shell: |
         mysql --protocol=socket -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'ExpenseApp@1';"
-      args:
-        warn: false
       register: password_result
       failed_when: false
-      changed_when: "'Query OK' in password_result.stdout or 'ERROR 1064' not in password_result.stderr"
+      changed_when: false
       
     - name: Verify MySQL connection
       ansible.builtin.shell: |
