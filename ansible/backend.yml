@@ -166,15 +166,6 @@
         timeout: 60
       when: service_status.changed
 
-    - name: Test backend endpoint
-      ansible.builtin.uri:
-        url: "http://localhost:8080/health"  # Adjust endpoint as needed
-        status_code: 200
-        timeout: 10
-      register: health_check
-      changed_when: false
-      ignore_errors: yes
-
     - name: Display setup completion
       ansible.builtin.debug:
         msg: |
