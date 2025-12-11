@@ -41,10 +41,13 @@
         mysql --protocol=socket -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'ExpenseApp@1';"
       args:
         warn: false
-      no_log: true
+      register: password_result
+      failed_when: false
+      changed_when: "'Query OK' in password_result.stdout or 'ERROR 1064' not in password_result.stderr"
       
     - name: Verify MySQL connection
       ansible.builtin.shell: |
         mysql -uroot -pExpenseApp@1 -e "SELECT 1;"
       register: mysql_test
       changed_when: false
+      no_log: true
