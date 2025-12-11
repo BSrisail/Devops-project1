@@ -3,7 +3,7 @@
   become: yes
   
   vars:
-    mysql_host: "10.0.0.48"
+    mysql_host: "10.0.0.51"
     mysql_root_password: "ExpenseApp@1"
     backend_zip_url: "https://expense-artifacts.s3.amazonaws.com/backend.zip"
     app_dir: "/app"
