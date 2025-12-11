@@ -125,18 +125,6 @@
       register: schema_load_result
       failed_when: false
 
-    # Alternative using mysql_db module (if mysql-python is available)
-    - name: Load database schema (alternative)
-      ansible.builtin.mysql_db:
-        login_host: "{{ mysql_host }}"
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-        name: expense
-        state: import
-        target: "{{ app_dir }}/schema/backend.sql"
-      when: not db_exists.rc == 0
-      ignore_errors: yes
-
     # Service Management
     - name: Reload systemd daemon (explicit)
       ansible.builtin.systemd:
@@ -167,4 +155,3 @@
           Application directory: {{ app_dir }}
           Service: backend
           MySQL host: {{ mysql_host }}
-          Health check: {{ 'PASSED' if health_check.status == 200 else 'FAILED - please check logs' }}
