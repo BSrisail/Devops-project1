@@ -122,7 +122,8 @@
       ansible.builtin.shell: |
         mysql -h {{ mysql_host }} -uroot -p{{ mysql_root_password }} < {{ app_dir }}/schema/backend.sql
       when: not db_exists.rc == 0
-      no_log: true
+      register: schema_load_result
+      failed_when: false
 
     # Alternative using mysql_db module (if mysql-python is available)
     - name: Load database schema (alternative)
