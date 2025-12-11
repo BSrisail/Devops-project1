@@ -27,11 +27,12 @@
         enabled: yes
         state: started
 
-    - name: Set MySQL root password
+    - name: Set MySQL root password via socket
       ansible.builtin.shell: |
-        mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'ExpenseApp@1';"
+        mysql --protocol=socket -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'ExpenseApp@1';"
       args:
-        creates: /var/lib/mysql/mysql.sock
+        warn: false
+      no_log: true
       
     - name: Verify MySQL connection
       ansible.builtin.shell: |
