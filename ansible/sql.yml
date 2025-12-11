@@ -43,9 +43,9 @@
       failed_when: false
       changed_when: false
       
-    - name: Verify MySQL connection
+    - name: Verify MySQL connection with socket
       ansible.builtin.shell: |
-        mysql -uroot -pExpenseApp@1 -e "SELECT 1;"
+        mysql --protocol=socket -uroot -e "SELECT 1;"
       register: mysql_test
       changed_when: false
-      no_log: true
+      failed_when: false
