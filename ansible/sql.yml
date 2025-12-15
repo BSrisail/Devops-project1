@@ -1,51 +1,90 @@
-- name: Configure MySQL
+---
+- name: Setup and Configure MySQL Server
   hosts: all
   become: yes
+  vars:
+    mysql_root_password: "ExpenseApp@1"
+    mysql_repo_file: "mysql.repo"
 
   tasks:
-    - name: Check if MySQL is already installed
-      ansible.builtin.command: mysql --version
-      register: mysql_installed
-      failed_when: false
-      changed_when: false
-
-    - name: Disable MySQL module
-      ansible.builtin.shell: dnf module disable mysql -y
-      args:
-        creates: /etc/yum.repos.d/mysql.repo
-      when: mysql_installed.rc != 0
+    - name: Disable default MySQL module
+      ansible.builtin.shell:
+        cmd: dnf module disable mysql -y
+      when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"
 
     - name: Copy MySQL repository file
       ansible.builtin.copy:
-        src: mysql.repo
+        src: "{{ mysql_repo_file }}"
         dest: /etc/yum.repos.d/mysql.repo
         owner: root
         group: root
         mode: '0644'
-      when: mysql_installed.rc != 0
+      when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"
 
     - name: Install MySQL Community Server
       ansible.builtin.package:
         name: mysql-community-server
         state: present
-      when: mysql_installed.rc != 0
+      when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"
 
-    - name: Enable and start MySQL service
-      ansible.builtin.systemd:
+    - name: Enable mysqld service
+      ansible.builtin.service:
         name: mysqld
         enabled: yes
+
+    - name: Start mysqld service
+      ansible.builtin.service:
+        name: mysqld
         state: started
 
-    - name: Set MySQL root password via socket
-      ansible.builtin.shell: |
-        mysql --protocol=socket -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'ExpenseApp@1';"
-      register: password_result
-      failed_when: false
-      changed_when: false
-      
-    - name: Verify MySQL connection with socket
-      ansible.builtin.shell: |
-        mysql --protocol=socket -uroot -e "SELECT 1;"
+    - name: Wait for MySQL to be ready
+      ansible.builtin.wait_for:
+        port: 3306
+        delay: 10
+        state: started
+        timeout: 60
+
+    - name: Set MySQL root password securely
+      ansible.builtin.shell:
+        cmd: |
+          # Check if root password is already set
+          if mysqladmin -u root ping > /dev/null 2>&1; then
+            # No password set, run mysql_secure_installation
+            mysql_secure_installation --set-root-pass {{ mysql_root_password }}
+          else
+            # Try with new password to see if it's already set
+            mysqladmin -u root -p{{ mysql_root_password }} ping > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo "MySQL root password is already set"
+            else
+              # Password might be different, need to reset
+              echo "MySQL root password exists but is different"
+            fi
+          fi
+        executable: /bin/bash
+      register: set_password_result
+      changed_when: "'already set' not in set_password_result.stdout"
+
+    - name: Verify MySQL connection with new password
+      ansible.builtin.shell:
+        cmd: mysql -uroot -p{{ mysql_root_password }} -e "SELECT VERSION();"
       register: mysql_test
-      changed_when: false
-      failed_when: false
+      ignore_errors: yes
+
+    - name: Display MySQL connection test result
+      ansible.builtin.debug:
+        msg: "MySQL connection successful: {{ mysql_test.stdout }}"
+      when: mysql_test.rc == 0
+
+    - name: Display MySQL connection failure
+      ansible.builtin.debug:
+        msg: "MySQL connection failed. Error: {{ mysql_test.stderr }}"
+      when: mysql_test.rc != 0
+
+    - name: Create a test database to confirm functionality
+      community.mysql.mysql_db:
+        name: test_db
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      ignore_errors: yes
