@@ -80,11 +80,4 @@
       ansible.builtin.debug:
         msg: "MySQL connection failed. Error: {{ mysql_test.stderr }}"
       when: mysql_test.rc != 0
-
-    - name: Create a test database to confirm functionality
-      community.mysql.mysql_db:
-        name: test_db
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-      ignore_errors: yes
+      
