@@ -5,5 +5,4 @@ Print
 variables
 loops
 redirections
-SED editor 
-
+SED editor
