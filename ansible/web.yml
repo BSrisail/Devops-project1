@@ -1,71 +1,51 @@
-- name: Configure Nginx
+---
+- name: Install and configure Nginx for Expense application
   hosts: all
   become: yes
-  
   vars:
-    frontend_url: "https://expense-artifacts.s3.amazonaws.com/frontend.zip"
+    frontend_zip_url: "https://expense-artifacts.s3.amazonaws.com/frontend.zip"
+    temp_zip_path: "/tmp/frontend.zip"
     nginx_html_dir: "/usr/share/nginx/html"
-    config_dir: "/etc/nginx/default.d"
-  
-  handlers:
-    - name: Reload nginx
-      ansible.builtin.systemd:
-        name: nginx
-        state: reloaded
-  
+
   tasks:
-    - name: Install required packages
-      ansible.builtin.package:
-        name:
-          - nginx
-          - unzip
+    - name: Install nginx package
+      ansible.builtin.dnf:
+        name: nginx
         state: present
-    
-    - name: Clean html directory
-      ansible.builtin.file:
-        path: "{{ nginx_html_dir }}"
-        state: absent
-    
-    - name: Recreate html directory
-      ansible.builtin.file:
-        path: "{{ nginx_html_dir }}"
-        state: directory
-        owner: nginx
-        group: nginx
-        mode: '0755'
-    
-    - name: Copy expense config
+
+    - name: Copy expense configuration file
       ansible.builtin.copy:
         src: expense.conf
-        dest: "{{ config_dir }}/expense.conf"
-        owner: root
-        group: root
+        dest: /etc/nginx/default.d/expense.conf
         mode: '0644'
-      notify: Reload nginx
-    
-    - name: Download frontend zip
+
+    - name: Remove existing files from nginx html directory
+      ansible.builtin.find:
+        path: "{{ nginx_html_dir }}"
+        file_type: any
+      register: html_files
+
+    - name: Delete all files in nginx html directory
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ html_files.files }}"
+      when: html_files.files | length > 0
+
+    - name: Download frontend zip file
       ansible.builtin.get_url:
-        url: "{{ frontend_url }}"
-        dest: /tmp/frontend.zip
+        url: "{{ frontend_zip_url }}"
+        dest: "{{ temp_zip_path }}"
         mode: '0644'
-    
-    - name: Extract frontend into nginx html
+
+    - name: Extract frontend zip file to nginx directory
       ansible.builtin.unarchive:
-        src: /tmp/frontend.zip
+        src: "{{ temp_zip_path }}"
         dest: "{{ nginx_html_dir }}"
         remote_src: yes
-        owner: nginx
-        group: nginx
-    
-    - name: Validate nginx configuration
-      ansible.builtin.command: nginx -t
-      register: nginx_test
-      changed_when: false
-      notify: Reload nginx
-    
-    - name: Ensure nginx is enabled and started
+
+    - name: Enable and start nginx service
       ansible.builtin.systemd:
         name: nginx
         enabled: yes
         state: started
-      notify: Reload nginx
